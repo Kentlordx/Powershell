@@ -1,0 +1,10 @@
+ Write-Host 'Sealing meny' -ForegroundColor Green
+# New-Item c:\temp -ItemType directory
+Copy-Item $PSScriptRoot\meny.ps1 c:\temp -recurse
+$F = "c:\temp\meny.ps1"
+$A = New-ScheduledtaskAction -execute "powershell.exe" -Argument "-noexit -executionpolicy bypass -file $F"
+$T = New-ScheduledTaskTrigger -atlogon 
+$S = New-ScheduledTaskSettingsSet
+$P = New-ScheduledTaskPrincipal -GroupId "BUILTIN\Administratorer" -RunLevel Highest
+$D = New-ScheduledTask -Action $A -Principal $P -Trigger $T -Settings $S
+Register-ScheduledTask Meny -InputObject $D 
