@@ -1,0 +1,32 @@
+$Computers = Get-ADComputer -SearchBase "OU=Servers,OU=New AD,DC=lordx,DC=no"  -Filter '(OperatingSystem -like "Windows Server*")' | Sort-Object Name
+
+ForEach ($Computer in $Computers) {
+    Write-Host "$($Computer.Name): " -ForegroundColor Yellow
+    IF (!(Test-Connection -ComputerName $Computer.Name -Count 1 -ea 0 -quiet))
+        
+        {write-host "cannot reach $Computer.Name" -f red}
+
+        else {
+    Invoke-WmiMethod -ComputerName $Computer.Name -Path win32_process -Name create -ArgumentList "powershell.exe -command Enable-PSRemoting -SkipNetworkProfileCheck -Force" | Out-Null
+    Invoke-WmiMethod -ComputerName $Computer.Name -Path win32_process -Name create -ArgumentList "powershell.exe -command winrm quickconfig -quiet" | Out-Null
+        
+    Invoke-Command -ComputerName $Computer.Name -ScriptBlock {
+        $NewDnsServerSearchOrder = "10.87.131.10","10.87.131.11"
+        $Adapters = Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.DHCPEnabled -ne 'True' -and $_.DNSServerSearchOrder -ne $null}
+       
+        # Show DNS servers before update
+        Write-Host "Before: " -ForegroundColor Green
+        $Adapters | ForEach-Object {$_.DNSServerSearchOrder}
+
+
+        # Update DNS servers
+        $Adapters | ForEach-Object {$_.SetDNSServerSearchOrder($NewDnsServerSearchOrder)} | Out-Null
+
+        # Show DNS servers after update
+        $Adapters = Get-WmiObject Win32_NetworkAdapterConfiguration | Where-Object {$_.DHCPEnabled -ne 'True' -and $_.DNSServerSearchOrder -ne $null}
+        Write-Host "After: " -ForegroundColor Green
+        $Adapters | ForEach-Object {$_.DNSServerSearchOrder}
+
+    }
+}
+}
