@@ -1,0 +1,8 @@
+$findgroups = Get-ADGroup -SearchBase 'OU=navn,OU=Groups,OU=ad,DC=lordx,DC=no' -filter {GroupCategory -eq "Security"}
+$groups = $findgroups.name
+
+foreach($Group in $Groups) {
+
+Get-ADGroupMember -Id $Group | select  @{Expression={$Group};Label="Group Name"},Name | Export-CSV c:\temp\GroupsInfo.CSV -NoTypeInformation -append -Encoding UTF8
+
+}
