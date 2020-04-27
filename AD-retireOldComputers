@@ -1,0 +1,27 @@
+#Import AD module
+Import-Module ActiveDirectory
+
+$ErrorActionPreference = "SilentlyContinue"
+
+$searchbase = "DC=lordx,DC=no"
+$EntGroups = "OU=Groups,DC=lordx,DC=no"
+$groups = Get-ADGroup -Properties Name -Filter * -searchbase $EntGroups
+$inactiveOU = "OU=Retired Objects,DC=lordx,DC=no"
+$Days = (Get-Date).AddDays(-90)
+$computers = Get-ADComputer -Properties * -Filter {LastLogonDate -lt $Days} -SearchBase $searchbase | where { ($_.DistinguishedName -notlike "*$inactiveOU*")}
+$DisabledComps = Get-ADComputer -Properties Name,Enabled,LastLogonDate -Filter {(Enabled -eq "False" -and LastLogonDate -lt $Days)} -SearchBase $inactiveOU
+
+#Move inactive computer accounts to your inactive OU
+foreach ($computer in $computers) {
+    Write-Host "$computer is old, i'm moving the føkker" -ForegroundColor Red	
+	Set-ADComputer $computer -Location $computer.LastLogonDate | Set-ADComputer $computer -Enabled $false 
+	Move-ADObject -Identity $computer.ObjectGUID -TargetPath $inactiveOU
+	#Remove group memberships
+	foreach ($group in $groups) {
+		Remove-ADGroupMember -Identity $group -Members $computer.ObjectGUID -Confirm:$false
+	}
+}
+#Optionally remove stale computer objects from AD
+#Remove stale computer accounts older than 365 days
+#$RemoveStale = Get-ADComputer -Filter * -SearchBase $DisabledComps | Where-Object {$_.Location -gt (Get-Date).AddDays(-365) -and $_.Location -lt (Get-Date).AddDays(-180)}
+#$RemoveStale | Remove-ADObject
