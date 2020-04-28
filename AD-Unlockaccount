@@ -1,0 +1,72 @@
+import-module activedirectory
+
+Write-Host ""
+Write-Host ""
+$acccount = Read-Host “Enter user name” 
+Write-Host "---------------------------------------------------"
+
+Write-Host "Account locked out?"
+
+$alllockedout = (Search-ADAccount –LockedOut).SamAccountName
+
+
+# Get locked out value
+(get-aduser "$acccount" -Properties LockedOut).LockedOut
+$badPwdCount = (get-aduser "$acccount" -Properties badPwdCount).badPwdCount
+
+
+# if lockout check
+
+if ((get-aduser "$acccount" -Properties LockedOut).LockedOut -eq "True")
+
+# Unlock account
+{
+
+## Find the domain controller PDCe role
+$Pdce = (Get-AdDomain).PDCEmulator
+
+## Build the parameters to pass to Get-WinEvent
+$GweParams = @{
+     ‘Computername’ = $Pdce
+     ‘LogName’ = ‘Security’
+     ‘FilterXPath’ = "*[System[EventID=4740] and EventData[Data[@Name='TargetUserName']='$acccount']]"
+}
+
+$Events = Get-WinEvent @GweParams
+$whereEvents = $Events[0].Properties[1].Value
+
+# prompt for unlock
+$title    = "$acccount is locked"
+$question = 'Do you want to unlock?'
+$choices  = '&Yes', '&No'
+
+        $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
+        if ($decision -eq 0) {
+        Write-Host 'confirmed'
+        Unlock-ADAccount $acccount
+        $usedaction = 'is unlocked'
+} else {
+    Write-Host 'cancelled'
+    $usedaction = 'Still locked'
+}
+
+
+
+Write-Host "---------------------------------------------------"
+Write-host "System that locked the account:" -nonewline; Write-Host $whereEvents -f red
+Write-Host "$acccount"  -f yellow -nonewline; Write-Host  " have $badPwdCount bad password attemps"
+Write-Host "$acccount"  -f yellow -nonewline; Write-Host  " $usedaction"
+Write-Host "---------------------------------------------------"
+Pause  
+}
+
+else
+# write host - Account is not locked out
+{
+Write-Host "---------------------------------------------------"
+Write-Host "$acccount"  -f yellow -nonewline; Write-Host " is not locked out!" -f Green
+Write-Host "But these accounts are locked:" 
+$alllockedout | Write-host -ForegroundColor Red
+Write-Host "---------------------------------------------------"
+Pause  
+}
