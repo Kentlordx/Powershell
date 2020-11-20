@@ -1,0 +1,2 @@
+    # Enable TLS 1.2 support for downloading modules from PSGallery
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
