@@ -1,0 +1,12 @@
+stop-service wuauserv
+Rename-Item C:\Windows\SoftwareDistribution         SoftwareDistribution.old
+start-service wuauserv
+Rmdir C:\Windows\SoftwareDistribution.old -recurse
+
+WMIC /namespace:\\root\ccm path sms_client CALL TriggerSchedule "{00000000-0000-0000-0000-000000000114}" /NOINTERACTIVE
+
+WMIC /namespace:\\root\ccm path sms_client CALL TriggerSchedule "{00000000-0000-0000-0000-000000000113}" /NOINTERACTIVE
+
+WMIC /namespace:\\root\ccm path sms_client CALL TriggerSchedule "{00000000-0000-0000-0000-000000000114}" /NOINTERACTIVE
+
+WMIC /namespace:\\root\ccm path sms_client CALL TriggerSchedule "{00000000-0000-0000-0000-000000000101}" /NOINTERACTIVE
