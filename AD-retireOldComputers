@@ -1,4 +1,4 @@
-#Import AD module
+# Import AD module
 Import-Module ActiveDirectory
 
 $ErrorActionPreference = "SilentlyContinue"
