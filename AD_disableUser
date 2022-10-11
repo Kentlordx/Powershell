@@ -1,3 +1,6 @@
+#Import AD module
+Import-Module ActiveDirectory
+
 #Collect user's details
 $script:existinguser = Read-Host -Prompt "Enter the username for the user you wish to disable and modify (ex: jsnow)" 
 
