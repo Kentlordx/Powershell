@@ -1,0 +1,42 @@
+#Collect user's details
+$script:existinguser = Read-Host -Prompt "Enter the username for the user you wish to disable and modify (ex: jsnow)" 
+
+
+#Checking if the user exists
+try {
+Get-ADUser -Identity $script:existinguser
+$UserExists = $true
+Write-Host "User exists, proceeding to disable the account." -ForegroundColor Green
+}
+catch [Microsoft.ActiveDirectory.Management.ADIdentityResolutionException] {
+"Fatal error!User does not exist."
+$UserExists = $false
+exit
+}
+#Disabling the account
+Disable-ADAccount -Identity $script:existinguser
+Write-Output "The account for the user $script:existinguser has been succesfully disabled." 
+Write-Output "Proceeding to the next step" 
+
+#Removing groups from user
+Try{
+$user=Get-ADUser -Identity $script:existinguser |select -exp samaccountname - 
+ErrorAction stop
+if($user){
+$ADgroups= Get-ADPrincipalGroupMembership -Identity  $user | where {$_.Name -ne 
+“Domain Users”}
+write-host "removing user from `n` $($adgroups.name)" -ForegroundColor green
+Remove-ADPrincipalGroupMembership -Identity  $user -MemberOf 
+$ADgroups.samaccountname -Confirm:$false 
+}
+}
+Catch{ Write-Warning $_.exception.message}
+
+#Moving the user to Past employees
+Get-ADUser $script:existinguser| Move-ADObject -TargetPath 'Ou=Past Employees, 
+DC=domain, Dc=local'
+Write-Output "The user has been moved to the OU Past Employees"
+
+#Filling in the description
+$nextmonth  = ((Get-Date).AddMonths(1))
+Set-ADUser $script:existinguser -Description "To be archived $nextmonth"
